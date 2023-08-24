@@ -31,7 +31,7 @@ jobs:
         --gen2 \
         --runtime=go120 \
         --region=us-central1 \
-        --source=pkg/telegram/ \
+        --source=. \
         --trigger-http \
         --allow-unauthenticated \
         --entry-point=HandleTelegramWebhook \
