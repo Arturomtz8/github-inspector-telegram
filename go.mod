@@ -3,7 +3,7 @@ module private.com/telegram-bot
 go 1.20
 
 require (
-	github.com/Arturomtz8/github-inspector v0.0.0-20230824230708-c88c4ecbca70
+	github.com/Arturomtz8/github-inspector v0.0.0-20230826133630-291e3f66d8d2
 	github.com/GoogleCloudPlatform/functions-framework-go v1.7.4
 )
 

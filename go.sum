@@ -586,6 +586,8 @@ github.com/Arturomtz8/github-inspector v0.0.0-20230811220719-7b34e9966679 h1:AYj
 github.com/Arturomtz8/github-inspector v0.0.0-20230811220719-7b34e9966679/go.mod h1:BfLMxEeTHWYZhCi0W30lPY4kSzFsmj5sj8ZTw/vw42w=
 github.com/Arturomtz8/github-inspector v0.0.0-20230824230708-c88c4ecbca70 h1:vuIqBoyC48Ds1ISUWcjThlR0N1631JW3zpEhr9wopp4=
 github.com/Arturomtz8/github-inspector v0.0.0-20230824230708-c88c4ecbca70/go.mod h1:3qZ5Wrq4bAk0nVWPRPx2RY47/0KdNWv1qx8mb6Mj/zc=
+github.com/Arturomtz8/github-inspector v0.0.0-20230826133630-291e3f66d8d2 h1:I+vVpmHSfxNT3PZqy0Y2644nm7m0lGL4ed19BzeYBOw=
+github.com/Arturomtz8/github-inspector v0.0.0-20230826133630-291e3f66d8d2/go.mod h1:3qZ5Wrq4bAk0nVWPRPx2RY47/0KdNWv1qx8mb6Mj/zc=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/GoogleCloudPlatform/functions-framework-go v1.7.4 h1:cz5nfbp9RydcNzxpsfp+v9IrOXpDuqf6x/W7cS4UHiU=
