@@ -85,7 +85,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	Description:   {{.Description}}
   Author:        {{.Owner.Login}}
 	Created at:    {{.CreatedAt}}
-	Update at:     {{.UpdatedAt}
+	Update at:     {{.UpdatedAt}}
 	Pushed at:     {{.PushedAt}}
 	Size(KB):      {{.Size}}
 	Language:      {{.Language}}
