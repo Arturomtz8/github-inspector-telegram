@@ -42,6 +42,7 @@ type Message struct {
 	Chat Chat   `json:"chat"`
 }
 
+// test
 // Update event.
 type Update struct {
 	UpdateId int     `json:"update_id"`
