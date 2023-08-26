@@ -42,7 +42,7 @@ type Message struct {
 	Chat Chat   `json:"chat"`
 }
 
-// test
+// trigger deploy
 // Update event.
 type Update struct {
 	UpdateId int     `json:"update_id"`
