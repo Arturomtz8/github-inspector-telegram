@@ -23,10 +23,10 @@ import (
 
 const (
 	searchCommand          string = "/search"
-	RepoURL                string = "https://api.github.com/search/repositories"
 	telegramApiBaseUrl     string = "https://api.telegram.org/bot"
 	telegramApiSendMessage string = "/sendMessage"
 	telegramTokenEnv       string = "GITHUB_BOT_TOKEN"
+	defaulRepoLen          int    = 10
 )
 
 var lenSearchCommand int = len(searchCommand)
@@ -67,45 +67,21 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	sanitizedString, err := sanitize(update.Message.Text)
 	if err != nil {
 		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-		fmt.Fprint(w, "Invald input")
+		fmt.Fprintf(w, "Invald input")
 		return
 	}
 
-	result, err := github.SearchGithubTrending(sanitizedString, RepoURL)
+	repos, err := github.GetTrendingRepos(github.TimeToday, sanitizedString)
 	if err != nil {
 		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
 		fmt.Fprintf(w, "An error has ocurred, %s!", err)
 		return
 	}
 
-	const templ = `{{.TotalCount}} repositories:
-	{{range .Items}}----------------------------------------
-	Name:          {{.FullName}}
-	Url:           {{.HtmlURL}}
-	Description:   {{.Description}}
-  Author:        {{.Owner.Login}}
-	Created at:    {{.CreatedAt}}
-	Update at:     {{.UpdatedAt}}
-	Pushed at:     {{.PushedAt}}
-	Size(KB):      {{.Size}}
-	Language:      {{.Language}}
-	Stargazers:    {{.StargazersCount}}
-	Archived:      {{.Archived}}
-	Open Issues:   {{.OpenIssuesCount}}
-	Topics:        {{.Topics}}
-	{{end}}`
-
-	var report = template.Must(template.New("trendinglist").Parse(templ))
-	buf := &bytes.Buffer{}
-	if err := report.Execute(buf, result); err != nil {
-		panic(err)
-	}
-
-	s := buf.String()
-
-	var telegramResponseBody, errTelegram = sendTextToTelegramChat(update.Message.Chat.Id, s)
-	if errTelegram != nil {
-		log.Printf("got error %s from telegram, response body is %s", errTelegram.Error(), telegramResponseBody)
+	reposContent, err := formatReposContentandSend(repos, update.Message.Chat.Id)
+	if err != nil {
+		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+		log.Printf("got error %s from telegram, response body is %s", err.Error(), reposContent)
 
 	} else {
 		log.Printf("successfully distributed to chat id %d", update.Message.Chat.Id)
@@ -142,8 +118,49 @@ func sanitize(s string) (string, error) {
 
 }
 
+// Formats the content of the repos and uses internally sendTextToTelegramChat function
+// for sending the formatted content to the respective chat
+func formatReposContentandSend(repos *github.TrendingSearchResult, chatId int) (string, error) {
+	var repoLen int
+	tmplFile := "repo.tmpl"
+	reposContent := make([]string, 0)
+
+	for _, repo := range repos.Items {
+		buf := &bytes.Buffer{}
+
+		tmpl, err := template.New(tmplFile).ParseFiles(tmplFile)
+		if err != nil {
+			sendTextToTelegramChat(chatId, err.Error())
+		}
+		err = tmpl.Execute(buf, repo)
+		if err != nil {
+			sendTextToTelegramChat(chatId, err.Error())
+		}
+
+		reposContent = append(reposContent, buf.String())
+	}
+
+	if len(reposContent) <= defaulRepoLen {
+		repoLen = len(reposContent)
+	} else {
+		repoLen = defaulRepoLen
+	}
+
+	for i := 0; i < repoLen; i++ {
+
+		repo := reposContent[i]
+		if _, err := sendTextToTelegramChat(chatId, repo); err != nil {
+			// No need to break loop, just continue to the next one.
+			log.Printf("error occurred publishing event %v", err)
+			continue
+		}
+
+	}
+	return "all repos sent to chat", nil
+}
+
 // sendTextToTelegramChat sends the response from the GitHub back to the chat,
-// given a chat it and the text from GitHub.
+// given a chat id and the text from GitHub.
 func sendTextToTelegramChat(chatId int, text string) (string, error) {
 	log.Printf("Sending %s to chat_id: %d", text, chatId)
 
