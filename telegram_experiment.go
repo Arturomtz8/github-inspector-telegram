@@ -80,7 +80,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	responseFunc, err := formatReposContentAndSend(repos, update.Message.Chat.Id)
 	if err != nil {
 		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-		fmt.Printf("got error %s from telegram, response body is %s", err.Error(), responseFunc)
+		fmt.Printf("got error %s from parsing repos", err.Error())
 		return
 
 	} else {
@@ -145,8 +145,7 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 	}
 
 	if len(reposContent) == 0 {
-		sendTextToTelegramChat(chatId, "There are not trending repos yet for today, try again later")
-		return "no new treing repos", nil
+		return "", errors.New("There are not trending repos yet for today, try again later")
 
 	} else if len(reposContent) <= defaulRepoLen {
 		repoLen = len(reposContent)
