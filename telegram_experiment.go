@@ -70,7 +70,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invald input")
 		return
 	}
-
+	fmt.Println("Sanitized string is: ", sanitizedString)
 	repos, err := github.GetTrendingRepos(github.TimeToday, sanitizedString)
 	if err != nil {
 		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
@@ -82,9 +82,11 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
 		log.Printf("got error %s from telegram, response body is %s", err.Error(), reposContent)
+		return
 
 	} else {
 		log.Printf("successfully distributed to chat id %d", update.Message.Chat.Id)
+		return
 	}
 
 }
