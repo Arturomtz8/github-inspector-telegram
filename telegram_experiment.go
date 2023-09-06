@@ -144,7 +144,11 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 		reposContent = append(reposContent, s)
 	}
 
-	if len(reposContent) <= defaulRepoLen {
+	if len(reposContent) == 0 {
+		sendTextToTelegramChat(chatId, "There are not trending repos yet for today, try again later")
+		return "no new treing repos", nil
+
+	} else if len(reposContent) <= defaulRepoLen {
 		repoLen = len(reposContent)
 	} else {
 		repoLen = defaulRepoLen
