@@ -122,22 +122,24 @@ func sanitize(s string) (string, error) {
 // for sending the formatted content to the respective chat
 func formatReposContentandSend(repos *github.TrendingSearchResult, chatId int) (string, error) {
 	var repoLen int
-	tmplFile := "repo.tmpl"
 	reposContent := make([]string, 0)
 
+	const templ = `
+	{{.FullName}}: {{.Description}}
+	Author: {{.Owner.Login}}
+	⭐: {{.StargazersCount}}
+	{{.HtmlURL}}
+	`
+
 	for _, repo := range repos.Items {
+		var report = template.Must(template.New("trendinglist").Parse(templ))
 		buf := &bytes.Buffer{}
-
-		tmpl, err := template.New(tmplFile).ParseFiles(tmplFile)
-		if err != nil {
+		if err := report.Execute(buf, repo); err != nil {
 			sendTextToTelegramChat(chatId, err.Error())
 		}
-		err = tmpl.Execute(buf, repo)
-		if err != nil {
-			sendTextToTelegramChat(chatId, err.Error())
-		}
+		s := buf.String()
 
-		reposContent = append(reposContent, buf.String())
+		reposContent = append(reposContent, s)
 	}
 
 	if len(reposContent) <= defaulRepoLen {
