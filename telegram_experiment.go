@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/Arturomtz8/github-inspector/pkg/github"
@@ -108,6 +109,8 @@ func sanitize(s string) (string, error) {
 	if len(s) >= lenSearchCommand {
 		if s[:lenSearchCommand] == searchCommand {
 			s = s[lenSearchCommand:]
+			s = strings.TrimSpace(s)
+			fmt.Printf("type of value entered: %T\n", s)
 		} else {
 			return "", errors.New("invalid value: you must enter /search {languague}")
 		}
