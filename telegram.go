@@ -66,7 +66,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// if message starts with another thing that is not /search, return and say nothing
 	if !strings.HasPrefix(update.Message.Text, "/search") {
-		fmt.Fprintf(w, "Invalid input")
+		fmt.Println("Invalid input")
 		return
 	}
 
