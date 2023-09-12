@@ -10,12 +10,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Arturomtz8/github-inspector/pkg/github"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
@@ -26,7 +28,7 @@ const (
 	telegramApiBaseUrl     string = "https://api.telegram.org/bot"
 	telegramApiSendMessage string = "/sendMessage"
 	telegramTokenEnv       string = "GITHUB_BOT_TOKEN"
-	defaulRepoLen          int    = 5
+	defaulRepoLen          int    = 4
 )
 
 var lenSearchCommand int = len(searchCommand)
@@ -137,6 +139,9 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 	⭐: {{.StargazersCount}}
 	{{.HtmlURL}}
 	`
+	// suffle the repos
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(repos.Items), func(i, j int) { repos.Items[i], repos.Items[j] = repos.Items[j], repos.Items[i] })
 
 	for index, repo := range repos.Items {
 		if index <= defaulRepoLen {
