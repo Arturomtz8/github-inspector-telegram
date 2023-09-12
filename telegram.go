@@ -138,26 +138,30 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 	{{.HtmlURL}}
 	`
 
-	for _, repo := range repos.Items {
-		var report = template.Must(template.New("trendinglist").Parse(templ))
-		buf := &bytes.Buffer{}
-		if err := report.Execute(buf, repo); err != nil {
-			sendTextToTelegramChat(chatId, err.Error())
-			return "", err
-		}
-		s := buf.String()
+	for index, repo := range repos.Items {
+		if index <= defaulRepoLen {
+			var report = template.Must(template.New("trendinglist").Parse(templ))
+			buf := &bytes.Buffer{}
+			if err := report.Execute(buf, repo); err != nil {
+				sendTextToTelegramChat(chatId, err.Error())
+				return "", err
+			}
+			s := buf.String()
 
-		reposContent = append(reposContent, s)
+			reposContent = append(reposContent, s)
+		}
+
 	}
 
 	if len(reposContent) == 0 {
 		return "", errors.New("There are not trending repos yet for today, try again later")
 
-	} else if len(reposContent) <= defaulRepoLen {
-		repoLen = len(reposContent)
-	} else {
-		repoLen = defaulRepoLen
 	}
+	// else if len(reposContent) <= defaulRepoLen {
+	// 	repoLen = len(reposContent)
+	// } else {
+	// 	repoLen = defaulRepoLen
+	// }
 	fmt.Println("template created and proceeding to send repos to chat")
 	fmt.Println("Total repos that will be sent", repoLen)
 
