@@ -26,7 +26,7 @@ const (
 	telegramApiBaseUrl     string = "https://api.telegram.org/bot"
 	telegramApiSendMessage string = "/sendMessage"
 	telegramTokenEnv       string = "GITHUB_BOT_TOKEN"
-	defaulRepoLen          int    = 10
+	defaulRepoLen          int    = 5
 )
 
 var lenSearchCommand int = len(searchCommand)
@@ -160,16 +160,25 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 	}
 	fmt.Println("template created and proceeding to send repos to chat")
 	fmt.Println("Total repos that will be sent", repoLen)
-	for i := 0; i < repoLen; i++ {
 
-		repo := reposContent[i]
-		if _, err := sendTextToTelegramChat(chatId, repo); err != nil {
-			// No need to break loop, just continue to the next one.
-			fmt.Printf("error occurred publishing event %v", err)
-			continue
-		}
+	text := strings.Join(reposContent, "\n-------------\n")
+	_, err := sendTextToTelegramChat(chatId, text)
+	if err != nil {
+		fmt.Printf("error occurred publishing event %v", err)
+		return "", err
 
 	}
+	// No need to break loop, just continue to the next one.
+	// for i := 0; i < repoLen; i++ {
+
+	// 	repo := reposContent[i]
+	// 	if _, err := sendTextToTelegramChat(chatId, repo); err != nil {
+	// 		// No need to break loop, just continue to the next one.
+	// 		fmt.Printf("error occurred publishing event %v", err)
+	// 		continue
+	// 	}
+
+	// }
 	return "all repos sent to chat", nil
 }
 
