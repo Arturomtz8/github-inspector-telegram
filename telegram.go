@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -29,6 +30,11 @@ const (
 	telegramApiSendMessage string = "/sendMessage"
 	telegramTokenEnv       string = "GITHUB_BOT_TOKEN"
 	defaulRepoLen          int    = 4
+	repoExpr               string = `^\/search\s(\w*)\s*.*`
+	langExpr               string = `^\/search\s.*\s+lang:([\w]*)`
+	authorExpr             string = `^\/search\s.*\s+author:([\w]*)`
+	langParam              string = "lang"
+	authorParam            string = "author"
 )
 
 var lenSearchCommand int = len(searchCommand)
@@ -219,4 +225,100 @@ func sendTextToTelegramChat(chatId int, text string) (string, error) {
 	fmt.Printf("body of telegram response: %s", bodyString)
 	return bodyString, nil
 
+}
+
+// ExtractParams parse the command sent by the user and returns
+// the name of the repository of interest (mandatory),
+// the programming languague (if provided),
+// the author of the repository (if provided).
+// The structure of the command is the shown below:
+// /search <repository> lang:<lang> author:<author>
+// e.g.
+// /search dblab lang:go author:danvergara
+func ExtractParams(s string) (string, string, string, error) {
+	s = strings.TrimSpace(s)
+
+	repo, err := extractRepo(s)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	lang, err := extractOptionalParam(s, langParam)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	author, err := extractOptionalParam(s, authorParam)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return repo, lang, author, nil
+}
+
+// extractRepo returns the name of the repository,
+// this is a mandatory parameter.
+// This function will error out if the repos is not found.
+func extractRepo(s string) (string, error) {
+	repoRegexp, err := regexp.Compile(repoExpr)
+	if err != nil {
+		return "", err
+	}
+
+	matches := repoRegexp.FindStringSubmatch(s)
+
+	if len(matches) >= 2 {
+		return matches[1], nil
+	}
+
+	return "", fmt.Errorf("repo not found in %s", s)
+}
+
+// extractOptionalParam returns the value of the param in question.
+// This function will not error out if the value is not found,
+// since this kind of params is not mandatory.
+func extractOptionalParam(s, param string) (string, error) {
+	var matches []string
+	switch param {
+	case langParam:
+		langRegexp, err := regexp.Compile(langExpr)
+		if err != nil {
+			return "", err
+		}
+
+		matches = langRegexp.FindStringSubmatch(s)
+
+		if len(matches) >= 2 {
+			return matches[1], nil
+		}
+	case authorParam:
+		authorRegexp, err := regexp.Compile(authorExpr)
+		if err != nil {
+			return "", err
+		}
+
+		matches = authorRegexp.FindStringSubmatch(s)
+
+		if len(matches) >= 2 {
+			return matches[1], nil
+		}
+	default:
+		return "", fmt.Errorf("%s option not supported", param)
+	}
+
+	// optional parameters.
+	return "", nil
+}
+
+// parseRepoToTemplate returns a text parsed based on the template constant,
+// to display the repository nicely to the user in the Telegram chat.
+func parseRepoToTemplate(repo *github.RepoTrending) (string, error) {
+	var report = template.Must(template.New("getrepo").Parse(templ))
+	buf := &bytes.Buffer{}
+
+	if err := report.Execute(buf, repo); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
