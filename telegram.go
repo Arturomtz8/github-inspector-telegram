@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -25,11 +26,24 @@ import (
 
 const (
 	searchCommand          string = "/search"
+	trendingCommand        string = "/trend"
 	telegramApiBaseUrl     string = "https://api.telegram.org/bot"
 	telegramApiSendMessage string = "/sendMessage"
 	telegramTokenEnv       string = "GITHUB_BOT_TOKEN"
 	defaulRepoLen          int    = 4
+	repoExpr               string = `^\/search\s(\w*)\s*.*`
+	langExpr               string = `^\/search\s.*\s+lang:([\w]*)`
+	authorExpr             string = `^\/search\s.*\s+author:([\w]*)`
+	langParam              string = "lang"
+	authorParam            string = "author"
 )
+
+const templ = `
+  {{.FullName}}: {{.Description}}
+  Author: {{.Owner.Login}}
+  ⭐: {{.StargazersCount}}
+  {{.HtmlURL}}
+`
 
 var lenSearchCommand int = len(searchCommand)
 
@@ -66,34 +80,65 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if message starts with another thing that is not /search, return and say nothing
-	if !strings.HasPrefix(update.Message.Text, "/search") {
-		fmt.Println("Invalid input")
-		return
-	}
+	// Handle multiple commands.
+	switch {
+	// Handle /search command to return a single repository data of interest.
+	case strings.HasPrefix(update.Message.Text, searchCommand):
+		// Get params from text message.
+		repo, lang, author, err := ExtractParams(update.Message.Text)
+		if err != nil {
+			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+			fmt.Fprintf(w, "invald input")
+			return
+		}
 
-	sanitizedString, err := sanitize(update.Message.Text)
-	if err != nil {
-		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-		fmt.Fprintf(w, "Invald input")
-		return
-	}
-	fmt.Println("Sanitized string is: ", sanitizedString)
-	repos, err := github.GetTrendingRepos(github.TimeToday, sanitizedString)
-	if err != nil {
-		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-		fmt.Fprintf(w, "An error has ocurred, %s!", err)
-		return
-	}
-	fmt.Println("raw repos: ", repos)
-	responseFunc, err := formatReposContentAndSend(repos, update.Message.Chat.Id)
-	if err != nil {
-		sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-		fmt.Printf("got error %s from parsing repos", err.Error())
-		return
+		// Get repository based off received params.
+		repository, err := github.GetRepository(github.RepoURL, repo, lang, author)
+		if err != nil {
+			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+			fmt.Fprintf(w, "invald input")
+			return
+		}
 
-	} else {
+		// Parse Repo into text template.
+		repoText, err := parseRepoToTemplate(repository)
+
+		// Send responsa back to chat.
+		_, err = sendTextToTelegramChat(update.Message.Chat.Id, repoText)
+		if err != nil {
+			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+			fmt.Fprintf(w, "invald input")
+			return
+		}
+		// Handle /trend command to return a list of treding repositories on GitHub.
+	case strings.HasPrefix(update.Message.Text, trendingCommand):
+		sanitizedString, err := sanitize(update.Message.Text)
+		if err != nil {
+			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+			fmt.Fprintf(w, "invald input")
+			return
+		}
+
+		fmt.Println("sanitized string: ", sanitizedString)
+		repos, err := github.GetTrendingRepos(github.TimeToday, sanitizedString)
+		if err != nil {
+			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+			fmt.Fprintf(w, "an error has ocurred, %s!", err)
+			return
+		}
+
+		fmt.Println("raw repos: ", repos)
+		responseFunc, err := formatReposContentAndSend(repos, update.Message.Chat.Id)
+		if err != nil {
+			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
+			fmt.Printf("got error %s from parsing repos", err.Error())
+			return
+		}
+
 		fmt.Printf("successfully distributed to chat id %d, response from loop: %s", update.Message.Chat.Id, responseFunc)
+		return
+	default:
+		fmt.Println("invalid command")
 		return
 	}
 
@@ -133,12 +178,6 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 	var repoLen int
 	reposContent := make([]string, 0)
 
-	const templ = `
-	{{.FullName}}: {{.Description}}
-	Author: {{.Owner.Login}}
-	⭐: {{.StargazersCount}}
-	{{.HtmlURL}}
-	`
 	// suffle the repos
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(repos.Items), func(i, j int) { repos.Items[i], repos.Items[j] = repos.Items[j], repos.Items[i] })
@@ -162,11 +201,7 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 		return "", errors.New("There are not trending repos yet for today, try again later")
 
 	}
-	// else if len(reposContent) <= defaulRepoLen {
-	// 	repoLen = len(reposContent)
-	// } else {
-	// 	repoLen = defaulRepoLen
-	// }
+
 	fmt.Println("template created and proceeding to send repos to chat")
 	fmt.Println("Total repos that will be sent", repoLen)
 
@@ -177,24 +212,14 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 		return "", err
 
 	}
-	// No need to break loop, just continue to the next one.
-	// for i := 0; i < repoLen; i++ {
 
-	// 	repo := reposContent[i]
-	// 	if _, err := sendTextToTelegramChat(chatId, repo); err != nil {
-	// 		// No need to break loop, just continue to the next one.
-	// 		fmt.Printf("error occurred publishing event %v", err)
-	// 		continue
-	// 	}
-
-	// }
 	return "all repos sent to chat", nil
 }
 
 // sendTextToTelegramChat sends the response from the GitHub back to the chat,
 // given a chat id and the text from GitHub.
 func sendTextToTelegramChat(chatId int, text string) (string, error) {
-	fmt.Printf("Sending %s to chat_id: %d", text, chatId)
+	fmt.Printf("sending %s to chat_id: %d", text, chatId)
 
 	var telegramApi string = "https://api.telegram.org/bot" + os.Getenv("GITHUB_BOT_TOKEN") + "/sendMessage"
 
@@ -219,4 +244,100 @@ func sendTextToTelegramChat(chatId int, text string) (string, error) {
 	fmt.Printf("body of telegram response: %s", bodyString)
 	return bodyString, nil
 
+}
+
+// ExtractParams parse the command sent by the user and returns
+// the name of the repository of interest (mandatory),
+// the programming languague (if provided),
+// the author of the repository (if provided).
+// The structure of the command is the shown below:
+// /search <repository> lang:<lang> author:<author>
+// e.g.
+// /search dblab lang:go author:danvergara
+func ExtractParams(s string) (string, string, string, error) {
+	s = strings.TrimSpace(s)
+
+	repo, err := extractRepo(s)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	lang, err := extractOptionalParam(s, langParam)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	author, err := extractOptionalParam(s, authorParam)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return repo, lang, author, nil
+}
+
+// extractRepo returns the name of the repository,
+// this is a mandatory parameter.
+// This function will error out if the repos is not found.
+func extractRepo(s string) (string, error) {
+	repoRegexp, err := regexp.Compile(repoExpr)
+	if err != nil {
+		return "", err
+	}
+
+	matches := repoRegexp.FindStringSubmatch(s)
+
+	if len(matches) >= 2 {
+		return matches[1], nil
+	}
+
+	return "", fmt.Errorf("repo not found in %s", s)
+}
+
+// extractOptionalParam returns the value of the param in question.
+// This function will not error out if the value is not found,
+// since this kind of params is not mandatory.
+func extractOptionalParam(s, param string) (string, error) {
+	var matches []string
+	switch param {
+	case langParam:
+		langRegexp, err := regexp.Compile(langExpr)
+		if err != nil {
+			return "", err
+		}
+
+		matches = langRegexp.FindStringSubmatch(s)
+
+		if len(matches) >= 2 {
+			return matches[1], nil
+		}
+	case authorParam:
+		authorRegexp, err := regexp.Compile(authorExpr)
+		if err != nil {
+			return "", err
+		}
+
+		matches = authorRegexp.FindStringSubmatch(s)
+
+		if len(matches) >= 2 {
+			return matches[1], nil
+		}
+	default:
+		return "", fmt.Errorf("%s option not supported", param)
+	}
+
+	// optional parameters.
+	return "", nil
+}
+
+// parseRepoToTemplate returns a text parsed based on the template constant,
+// to display the repository nicely to the user in the Telegram chat.
+func parseRepoToTemplate(repo *github.RepoTrending) (string, error) {
+	var report = template.Must(template.New("getrepo").Parse(templ))
+	buf := &bytes.Buffer{}
+
+	if err := report.Execute(buf, repo); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
