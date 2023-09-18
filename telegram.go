@@ -45,8 +45,6 @@ const templ = `
   {{.HtmlURL}}
 `
 
-var lenTrendingCommand int = len(trendingCommand)
-
 // Chat struct stores the id of the chat in question.
 type Chat struct {
 	Id int `json:"id"`
@@ -112,7 +110,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 		// Handle /trend command to return a list of treding repositories on GitHub.
 	case strings.HasPrefix(update.Message.Text, trendingCommand):
-		sanitizedString, err := sanitize(update.Message.Text)
+		sanitizedString, err := sanitize(update.Message.Text, trendingCommand)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
 			fmt.Fprintf(w, "invald input")
@@ -158,10 +156,11 @@ func parseTelegramRequest(r *http.Request) (*Update, error) {
 
 // returns the term that wants to be searched or
 // an string that specifies the expected input
-func sanitize(s string) (string, error) {
-	if len(s) >= lenTrendingCommand {
-		if s[:lenTrendingCommand] == trendingCommand {
-			s = s[lenTrendingCommand:]
+func sanitize(s, botCommand string) (string, error) {
+	var lenBotCommand int = len(botCommand)
+	if len(s) >= lenBotCommand {
+		if s[:lenBotCommand] == botCommand {
+			s = s[lenBotCommand:]
 			s = strings.TrimSpace(s)
 			fmt.Printf("type of value entered: %T\n", s)
 		}
