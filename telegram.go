@@ -45,7 +45,7 @@ const templ = `
   {{.HtmlURL}}
 `
 
-var lenSearchCommand int = len(searchCommand)
+var lenTrendingCommand int = len(trendingCommand)
 
 // Chat struct stores the id of the chat in question.
 type Chat struct {
@@ -159,9 +159,9 @@ func parseTelegramRequest(r *http.Request) (*Update, error) {
 // returns the term that wants to be searched or
 // an string that specifies the expected input
 func sanitize(s string) (string, error) {
-	if len(s) >= lenSearchCommand {
-		if s[:lenSearchCommand] == searchCommand {
-			s = s[lenSearchCommand:]
+	if len(s) >= lenTrendingCommand {
+		if s[:lenTrendingCommand] == trendingCommand {
+			s = s[lenTrendingCommand:]
 			s = strings.TrimSpace(s)
 			fmt.Printf("type of value entered: %T\n", s)
 		}
