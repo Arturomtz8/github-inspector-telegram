@@ -30,9 +30,9 @@ jobs:
       run: |
         gcloud beta functions deploy telegram-bot-handler \
         --gen2 \
-        --concurrency=10
-        --runtime=go120 \
         --region=us-central1 \
+        --runtime=go120 \
+        --concurrency=10 \
         --source=. \
         --trigger-http \
         --allow-unauthenticated \
