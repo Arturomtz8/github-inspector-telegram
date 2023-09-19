@@ -25,20 +25,20 @@ jobs:
       uses: 'google-github-actions/setup-gcloud@v1'
       with:
         version: '>= 363.0.0'
-        install_components: 'beta'
+        # install_components: 'beta'
     - name: 'Use gcloud CLI to deploy a cloud function gen 2'
       run: |
-        gcloud beta functions deploy telegram-bot-handler \
+        gcloud functions deploy telegram-bot-handler \
         --gen2 \
         --region=us-central1 \
         --runtime=go120 \
-        --concurrency=10 \
         --source=. \
         --trigger-http \
         --allow-unauthenticated \
         --entry-point=HandleTelegramWebhook \
         --memory=256MiB \
-        --cpu=2 \
+        --min-instances=4 \
+        --max-instances=10 \
         --timeout=360s \
         --set-env-vars=GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
         --quiet
