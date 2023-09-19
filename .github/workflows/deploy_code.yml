@@ -38,6 +38,7 @@ jobs:
         --allow-unauthenticated \
         --entry-point=HandleTelegramWebhook \
         --memory=256MiB \
+        --cpu=2 \
         --timeout=360s \
         --set-env-vars=GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
         --quiet
