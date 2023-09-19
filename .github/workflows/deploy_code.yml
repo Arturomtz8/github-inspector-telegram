@@ -30,6 +30,7 @@ jobs:
       run: |
         gcloud beta functions deploy telegram-bot-handler \
         --gen2 \
+        --concurrency=4 \
         --region=us-central1 \
         --runtime=go120 \
         --source=. \
@@ -38,7 +39,7 @@ jobs:
         --entry-point=HandleTelegramWebhook \
         --memory=256MiB \
         --min-instances=4 \
-        --max-instances=10 \
-        --timeout=360s \
+        --max-instances=20 \
+        --timeout=400s \
         --set-env-vars=GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
         --quiet
