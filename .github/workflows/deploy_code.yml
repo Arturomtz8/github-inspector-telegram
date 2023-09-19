@@ -29,13 +29,14 @@ jobs:
       run: |
         gcloud functions deploy telegram-bot-handler \
         --gen2 \
+        --concurrency=8 \
         --runtime=go120 \
         --region=us-central1 \
         --source=. \
         --trigger-http \
         --allow-unauthenticated \
         --entry-point=HandleTelegramWebhook \
-        --memory=128MiB \
-        --timeout=60s \
+        --memory=256MiB \
+        --timeout=180s \
         --set-env-vars=GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
         --quiet
