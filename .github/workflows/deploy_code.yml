@@ -27,7 +27,7 @@ jobs:
         version: '>= 363.0.0'
     - name: 'Use gcloud CLI to deploy a cloud function gen 2'
       run: |
-        gcloud functions deploy telegram-bot-handler \
+        gcloud beta functions deploy telegram-bot-handler \
         --gen2 \
         --concurrency=8 \
         --runtime=go120 \
