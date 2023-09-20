@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -47,7 +48,10 @@ const templ = `
 
 // Chat struct stores the id of the chat in question.
 type Chat struct {
-	Id int `json:"id"`
+	Id       int    `json:"id"`
+	Title    string `json:"title"`
+	Username string `json:"username"`
+	Type     string `json:"type"`
 }
 
 // Message struct store Chat and text data.
@@ -74,9 +78,11 @@ func init() {
 func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	var update, err = parseTelegramRequest(r)
 	if err != nil {
-		fmt.Printf("error parsing update, %s", err.Error())
+		log.Printf("error parsing update, %s", err.Error())
 		return
 	}
+
+	log.Printf("incoming request from chat with username %s", update.Message.Chat.Username)
 
 	// Handle multiple commands.
 	switch {
@@ -86,7 +92,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		repo, lang, author, err := ExtractParams(update.Message.Text)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-			fmt.Fprintf(w, "invald input")
+			fmt.Fprintf(w, "invalid input %s with error %v", update.Message.Text, err)
 			return
 		}
 
@@ -94,7 +100,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		repository, err := github.GetRepository(github.RepoURL, repo, lang, author)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-			fmt.Fprintf(w, "invald input")
+			fmt.Fprintf(w, "invalid input %s with error %v", update.Message.Text, err)
 			return
 		}
 
@@ -105,7 +111,7 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		_, err = sendTextToTelegramChat(update.Message.Chat.Id, repoText)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-			fmt.Fprintf(w, "invald input")
+			fmt.Fprintf(w, "invalid input %s with error %v", update.Message.Text, err)
 			return
 		}
 		// Handle /trend command to return a list of treding repositories on GitHub.
@@ -113,11 +119,11 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		sanitizedString, err := sanitize(update.Message.Text, trendingCommand)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-			fmt.Fprintf(w, "invald input")
+			fmt.Fprintf(w, "invalid input %s with error %v", update.Message.Text, err)
 			return
 		}
 
-		fmt.Println("sanitized string: ", sanitizedString)
+		log.Printf("sanitized string: %s", sanitizedString)
 		repos, err := github.GetTrendingRepos(github.TimeToday, sanitizedString)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
@@ -125,18 +131,17 @@ func HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Println("raw repos: ", repos)
 		responseFunc, err := formatReposContentAndSend(repos, update.Message.Chat.Id)
 		if err != nil {
 			sendTextToTelegramChat(update.Message.Chat.Id, err.Error())
-			fmt.Printf("got error %s from parsing repos", err.Error())
+			fmt.Printf("got error %v from parsing repos", err)
 			return
 		}
 
-		fmt.Printf("successfully distributed to chat id %d, response from loop: %s", update.Message.Chat.Id, responseFunc)
+		log.Printf("successfully distributed to chat id %d, response from loop: %s", update.Message.Chat.Id, responseFunc)
 		return
 	default:
-		fmt.Println("invalid command")
+		log.Printf("invalid command: %s", update.Message.Text)
 		return
 	}
 
@@ -148,7 +153,7 @@ func parseTelegramRequest(r *http.Request) (*Update, error) {
 	var update Update
 
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		fmt.Printf("could not decode incoming update %s", err.Error())
+		log.Printf("could not decode incoming update %s", err.Error())
 		return nil, err
 	}
 	return &update, nil
@@ -162,10 +167,11 @@ func sanitize(s, botCommand string) (string, error) {
 		if s[:lenBotCommand] == botCommand {
 			s = s[lenBotCommand:]
 			s = strings.TrimSpace(s)
-			fmt.Printf("type of value entered: %T\n", s)
+			log.Printf("type of value entered: %T", s)
 		}
 	} else {
-		return "", errors.New("invalid value: you must enter /search {languague}")
+		return "", fmt.Errorf("invalid command: %s", s)
+
 	}
 	return s, nil
 
@@ -174,7 +180,6 @@ func sanitize(s, botCommand string) (string, error) {
 // Formats the content of the repos and uses internally sendTextToTelegramChat function
 // for sending the formatted content to the respective chat
 func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (string, error) {
-	var repoLen int
 	reposContent := make([]string, 0)
 
 	// suffle the repos
@@ -197,17 +202,16 @@ func formatReposContentAndSend(repos *github.TrendingSearchResult, chatId int) (
 	}
 
 	if len(reposContent) == 0 {
-		return "", errors.New("There are not trending repos yet for today, try again later")
-
+		return "", errors.New("there are not trending repos yet for today, try again later")
 	}
 
-	fmt.Println("template created and proceeding to send repos to chat")
-	fmt.Println("Total repos that will be sent", repoLen)
+	log.Println("template created and proceeding to send repos to chat")
+	log.Println("repos count to be sent", len(reposContent))
 
 	text := strings.Join(reposContent, "\n-------------\n")
 	_, err := sendTextToTelegramChat(chatId, text)
 	if err != nil {
-		fmt.Printf("error occurred publishing event %v", err)
+		log.Printf("error occurred publishing event %v", err)
 		return "", err
 
 	}
@@ -229,18 +233,18 @@ func sendTextToTelegramChat(chatId int, text string) (string, error) {
 			"text":    {text},
 		})
 	if err != nil {
-		fmt.Printf("error when posting text to the chat: %s", err.Error())
+		log.Printf("error when posting text to the chat: %s", err.Error())
 		return "", err
 	}
 	defer response.Body.Close()
 	var bodyBytes, errRead = ioutil.ReadAll(response.Body)
 	if errRead != nil {
-		fmt.Printf("error parsing telegram answer %s", errRead.Error())
+		log.Printf("error parsing telegram answer %s", errRead.Error())
 		return "", err
 	}
 
 	bodyString := string(bodyBytes)
-	fmt.Printf("body of telegram response: %s", bodyString)
+	log.Printf("body of telegram response: %s", bodyString)
 	return bodyString, nil
 
 }
