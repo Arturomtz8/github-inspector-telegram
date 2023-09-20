@@ -1,4 +1,4 @@
-GitHub Inspector - Telegram bot
+Github Inspector - Telegram bot
 ==============================
 
 Telegram bot meant to support development community, in general, and the Go community, in particular.
@@ -29,3 +29,6 @@ As you can see, the name of the repository **should** be the first parameter and
 e.g.
 
 `/trend python`
+
+## Chat with it
+[Github Inspector](https://t.me/GithubInspectorBot)
