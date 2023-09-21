@@ -73,6 +73,17 @@ func TestExtractParams(t *testing.T) {
 				lang:   "go",
 			},
 		},
+		{
+			name: "providing an repo and author with dashes in the name",
+			input: input{
+				s: "/search go-swagger author:go-swagger lang:go",
+			},
+			expected: expected{
+				repo:   "go-swagger",
+				author: "go-swagger",
+				lang:   "go",
+			},
+		},
 	}
 
 	for _, tc := range tests {

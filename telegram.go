@@ -32,9 +32,9 @@ const (
 	telegramApiSendMessage string = "/sendMessage"
 	telegramTokenEnv       string = "GITHUB_BOT_TOKEN"
 	defaulRepoLen          int    = 4
-	repoExpr               string = `^\/search\s(\w*)\s*.*`
+	repoExpr               string = `^\/search\s(([A-Za-z0-9\-\_]+))\s*.*`
 	langExpr               string = `^\/search\s.*\s+lang:([\w]*)`
-	authorExpr             string = `^\/search\s.*\s+author:([\w]*)`
+	authorExpr             string = `^\/search\s.*\s+author:(([A-Za-z0-9\-\_]+))`
 	langParam              string = "lang"
 	authorParam            string = "author"
 )
