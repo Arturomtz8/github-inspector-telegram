@@ -30,6 +30,7 @@ jobs:
       run: |
         gcloud beta functions deploy telegram-bot-handler \
         --gen2 \
+        --cpu=2 \
         --concurrency=4 \
         --region=us-central1 \
         --runtime=go120 \
