@@ -1,6 +1,9 @@
 Github Inspector - Telegram bot
 ==============================
 
+⚠️ WARNING - It is deactivated but you can replicate the code and test it in your personal chat
+
+
 Telegram bot meant to support development community, in general, and the Go community, in particular.
 
 This task is achieved by providing two commands:
