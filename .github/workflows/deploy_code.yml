@@ -29,7 +29,7 @@ jobs:
       run: |
         gcloud functions deploy inspector-handler \
         --region=us-central1 \
-        --runtime=go120 \
+        --runtime=go121 \
         --source=. \
         --trigger-http \
         --allow-unauthenticated \
